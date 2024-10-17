@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import co.edu.uptc.animals_rest.exception.InvalidRangeException;
 import co.edu.uptc.animals_rest.models.Animal;
 import co.edu.uptc.animals_rest.models.CategoryCount;
+import co.edu.uptc.animals_rest.models.CheckIp;
 
 import java.util.ArrayList;
 
@@ -19,6 +20,7 @@ import org.springframework.beans.factory.annotation.Value;
 
 @Service
 public class AnimalService {
+    private CheckIp ip =  new CheckIp();
     private static final Logger logger = LoggerFactory.getLogger(AnimalService.class);
     @Value("${animal.file.path}")
     private String filePath;
@@ -31,7 +33,7 @@ public class AnimalService {
             logger.warn("Invalid range: Please check the provided indices. Range: 0 to {}", listAnimal.size());
             throw new InvalidRangeException("Invalid range: Please check the provided indices.");
         }
-
+        
         for (String line : listAnimal) {
             String[] parts = line.split(",");
             if (parts.length == 2) {
@@ -40,14 +42,16 @@ public class AnimalService {
                 animales.add(new Animal(nombre, categoria));
             }
         }
-
-        return animales.subList(from, to + 1);
+        animales = animales.subList(from, to + 1);
+        addIp(animales);
+        return animales;
     }
 
     public List<Animal> getAnimalAll() throws IOException {
         List<String> listAnimal = Files.readAllLines(Paths.get(filePath));
         List<Animal> animales = new ArrayList<>();
 
+        addIp(animales);
         for (String line : listAnimal) {
             String[] parts = line.split(",");
             if (parts.length == 2) {
@@ -56,11 +60,10 @@ public class AnimalService {
                 animales.add(new Animal(name, category));
             }
         }
-
         return animales;
     }
 
-    public List<String> findDistinctCategory() throws IOException {
+    private List<String> findDistinctCategory() throws IOException {
         List<String> categories = new ArrayList<>();
         List<Animal> animals = getAnimalAll();
         for (Animal animal : animals) {
@@ -74,7 +77,8 @@ public class AnimalService {
     public List<CategoryCount> getAnimalsByCategory() throws IOException {
         List<CategoryCount> categoryCounts = new ArrayList<>();
         List<String> categories = findDistinctCategory();
-
+        
+        categories.add(ip.obtenerIP());
         for (String category : categories) {
             long count = 0;
             List<Animal> animals = getAnimalAll();
@@ -87,4 +91,9 @@ public class AnimalService {
         }
         return categoryCounts;
     }
+
+    private void addIp (List<Animal> animals){
+        animals.add(new Animal(ip.obtenerIP(), "IP"));
+    }
+
 }
